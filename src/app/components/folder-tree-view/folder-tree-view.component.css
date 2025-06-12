@@ -1,0 +1,7 @@
+:host {
+  display: block;
+}
+
+.group:hover span {
+  transition: color 0.2s ease-in-out;
+}
