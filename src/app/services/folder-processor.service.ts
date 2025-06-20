@@ -91,25 +91,35 @@ export class FolderProcessorService {
     });
   }
 
-  private isEffectivelyIgnored(filePath: string, gitignoreMap: Map<string, GitignoreRule[]>): boolean {
+private isEffectivelyIgnored(filePath: string, gitignoreMap: Map<string, GitignoreRule[]>): boolean {
     const pathParts = filePath.split('/');
-    let decision = false;
+    const dirsToCheck: string[] = [];
     
-    const dirsToCheck: string[] = [''];
-    for (let i = 0; i < pathParts.length - 1; i++) {
-      dirsToCheck.push(pathParts.slice(0, i + 1).join('/'));
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+        dirsToCheck.push(pathParts.slice(0, i).join('/'));
     }
 
+    let isIgnored = false;
+    
     for (const dir of dirsToCheck) {
-      const rules = gitignoreMap.get(dir);
-      if (rules) {
-        const pathRelativeToDir = dir === '' ? filePath : filePath.substring(dir.length + 1);
-        decision = applyGitignoreRules(pathRelativeToDir, rules, decision);
-      }
+        const rules = gitignoreMap.get(dir);
+        if (!rules) continue;
+        
+        const pathRelativeToDir = dir ? 
+            filePath.substring(dir.length + 1) : 
+            filePath;
+            
+        for (const rule of rules) {
+            if (rule.regex.test(pathRelativeToDir)) {
+                isIgnored = !rule.isNegated;
+                
+                if (rule.isNegated) return false;
+            }
+        }
     }
-
-    return decision;
-  }
+    
+    return isIgnored;
+}
   
   private sortTree(node: TreeNode): void {
     if (node.children) {

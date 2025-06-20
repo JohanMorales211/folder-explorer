@@ -5,26 +5,30 @@ export interface GitignoreRule {
 }
 
 function patternToRegexString(pattern: string): string {
-  let regexString = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+    if (!pattern) return '^$';
+    
+    pattern = pattern.trim();
+    
+    if (pattern.startsWith('#')) return '^$';
+    
+    const isNegated = pattern.startsWith('!');
+    if (isNegated) pattern = pattern.substring(1);
+    
+    let regexString = pattern
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*\*/g, '.*')       
+        .replace(/\*/g, '[^/]*')      
+        .replace(/\/$/, '(/|$)');     
 
-  regexString = regexString
-    .replace(/\\\*\\\*\//g, '(.*/)?')
-    .replace(/\\\*\\\*/g, '.*')
-    .replace(/\\\*/g, '[^/]*');
-
-  if (!pattern.startsWith('/') && !pattern.includes('/')) {
-    regexString = `(^|.*/)${regexString}`;
-  }
-
-  if (regexString.startsWith('/')) {
-    regexString = regexString.substring(1);
-  }
-  
-  if (pattern.endsWith('/')) {
-    return `^${regexString}(/.*)?$`;
-  }
-
-  return `^${regexString}(/.*)?$`;
+    if (pattern.startsWith('/')) {
+        regexString = '^' + regexString.substring(1);
+    } else if (!pattern.includes('/')) {
+        regexString = '(^|/)' + regexString;
+    } else {
+        regexString = '^' + regexString;
+    }
+    
+    return regexString;
 }
 
 export function parseGitignore(content: string): GitignoreRule[] {
